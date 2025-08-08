@@ -28,7 +28,7 @@ def check_site(url, sold_out_markers):
         return None
 
 async def main():
-        await bot.send_message(CHAT_ID, "✅ Тест: бот запущен и работает!")
+    await bot.send_message(CHAT_ID, "✅ Тест: бот запущен и работает!")
     while True:
         messages = []
 
