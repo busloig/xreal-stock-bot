@@ -28,13 +28,13 @@ async def check_availability():
             text = await r.text()
             results.append("✅ XREAL EU: В наличии" if "Add to cart" in text else "❌ XREAL EU: Нет в наличии")
 
-        # Amazon NL
-        async with session.get("https://www.amazon.nl/dp/B0XXXXX") as r:  # замените на реальную ссылку
+        # Amazon NL (пример — вставь свою ссылку)
+        async with session.get("https://www.amazon.nl/dp/B0XXXXX") as r:
             text = await r.text()
             results.append("✅ Amazon NL: В наличии" if "Add to Cart" in text else "❌ Amazon NL: Нет в наличии")
 
-        # Unbound XR
-        async with session.get("https://unboundxr.nl/xreal-one-pro-l") as r:  # замените на реальную ссылку
+        # Unbound XR (пример — вставь свою ссылку)
+        async with session.get("https://unboundxr.nl/xreal-one-pro-l") as r:
             text = await r.text()
             results.append("✅ Unbound XR: В наличии" if "In stock" in text else "❌ Unbound XR: Нет в наличии")
 
@@ -47,9 +47,13 @@ async def start_cmd(message: types.Message):
 
 @dp.message(lambda m: m.text == "Проверить наличие")
 async def manual_check(message: types.Message):
-    await message.answer("🔍 Проверяю наличие...")
+    await message.answer("🔍 Проверяю наличие...", reply_markup=keyboard)
     result = await check_availability()
-    await message.answer(result)
+    await message.answer(result, reply_markup=keyboard)
+
+@dp.message()
+async def fallback(message: types.Message):
+    await message.answer("Нажми кнопку, чтобы проверить наличие Xreal One Pro L.", reply_markup=keyboard)
 
 # --- ЗАПУСК ---
 async def main():
