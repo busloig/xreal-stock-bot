@@ -1,48 +1,59 @@
 import asyncio
 import os
-import requests
-from aiogram import Bot
-from dotenv import load_dotenv
-
-load_dotenv()
+import aiohttp
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.filters import Command
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-CHECK_INTERVAL_MINUTES = int(os.getenv("CHECK_INTERVAL_MINUTES", 360))
-URL_XREAL = os.getenv("URL_XREAL")
-URL_AMAZON = os.getenv("URL_AMAZON")
-URL_UNBOUND = os.getenv("URL_UNBOUND")
 
 bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
-def check_site(url, sold_out_markers):
-    try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        resp = requests.get(url, headers=headers, timeout=10)
-        text = resp.text.lower()
-        for marker in sold_out_markers:
-            if marker.lower() in text:
-                return None
-        return True
-    except Exception as e:
-        return None
+# --- КНОПКА ---
+keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="Проверить наличие")]
+    ],
+    resize_keyboard=True
+)
 
+# --- ПРОВЕРКА ---
+async def check_availability():
+    results = []
+    async with aiohttp.ClientSession() as session:
+        # EU магазин XREAL
+        async with session.get("https://eu.shop.xreal.com/products/xreal-air-2-pro") as r:
+            text = await r.text()
+            results.append("✅ XREAL EU: В наличии" if "Add to cart" in text else "❌ XREAL EU: Нет в наличии")
+
+        # Amazon NL
+        async with session.get("https://www.amazon.nl/dp/B0XXXXX") as r:  # замените на реальную ссылку
+            text = await r.text()
+            results.append("✅ Amazon NL: В наличии" if "Add to Cart" in text else "❌ Amazon NL: Нет в наличии")
+
+        # Unbound XR
+        async with session.get("https://unboundxr.nl/xreal-one-pro-l") as r:  # замените на реальную ссылку
+            text = await r.text()
+            results.append("✅ Unbound XR: В наличии" if "In stock" in text else "❌ Unbound XR: Нет в наличии")
+
+    return "\n".join(results)
+
+# --- ХЕНДЛЕРЫ ---
+@dp.message(Command("start"))
+async def start_cmd(message: types.Message):
+    await message.answer("Привет! Нажми кнопку, чтобы проверить наличие Xreal One Pro L.", reply_markup=keyboard)
+
+@dp.message(lambda m: m.text == "Проверить наличие")
+async def manual_check(message: types.Message):
+    await message.answer("🔍 Проверяю наличие...")
+    result = await check_availability()
+    await message.answer(result)
+
+# --- ЗАПУСК ---
 async def main():
-    await bot.send_message(CHAT_ID, "✅ Тест: бот запущен и работает!")
-    while True:
-        messages = []
-
-        if check_site(URL_XREAL, ["sold out", "out of stock"]):
-            messages.append(f"🎉 One Pro L доступна в EU-магазине!\n{URL_XREAL}")
-        if check_site(URL_AMAZON, ["currently unavailable", "derzeit nicht verfügbar"]):
-            messages.append(f"📦 One Pro L доступна на Amazon NL!\n{URL_AMAZON}")
-        if check_site(URL_UNBOUND, ["sold out", "out of stock"]):
-            messages.append(f"🏢 One Pro L доступна у Unbound XR!\n{URL_UNBOUND}")
-
-        for msg in messages:
-            await bot.send_message(CHAT_ID, msg)
-
-        await asyncio.sleep(CHECK_INTERVAL_MINUTES * 60)
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
